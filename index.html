@@ -6,14 +6,25 @@
   <title>Metin2 Upgrade Simulator</title>
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      background: #18181a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #18181a repeat;
+  background-size: 200px 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, #18181aee 60%, #23221fdd 100%);
+  z-index: 0;
+}
+
     .upgrade-window {
       background: none;
       border: none;
@@ -136,29 +147,62 @@
       background: linear-gradient(90deg,#ffe066 40%,#b89e4b 100%);
       box-shadow: 0 0 18px #ffe06680;
     }
+    .upgrade-close-btn {
+      position: absolute;
+    right: 37px;
+    top: 15px;
+    transform: translateY(-50%);
+    opacity: 0;
+    pointer-events: auto;
+    background: #23221f;
+    border: 2px solid #ffd700;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 1.35em;
+    color: #ffe066;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ffd70088;
+    transition: background 0.13s, box-shadow 0.13s, color 0.13s;
+    z-index: 2;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
     /* Modal */
-    .modal-bg {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: #000a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-    }
-    .modal {
-      background: #24231f;
-      border: 2px solid #b89e4b;
-      border-radius: 12px;
-      box-shadow: 0 0 32px #000a;
-      padding: 32px 40px;
-      text-align: center;
-      min-width: 320px;
-    }
+    .upgrade-modal-bg {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+    .upgrade-modal {
+  background: url('img/background_pattern.png') repeat;
+  background-size: 31px 31px;
+  padding: 5px 0px 14px 0px;
+  min-width: 320px;
+  max-width: 330px;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
     .modal .item-img {
-      width: 72px;
-      height: 72px;
-      margin-bottom: 8px;
+      margin: 0 auto 10px auto;
+      filter: drop-shadow(0 0 16px #ffd700cc) drop-shadow(0 0 6px #fff5);
+      position: relative;
+    }
+    .modal .item-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 10px;
     }
     .modal-btns {
       margin-top: 24px;
@@ -166,20 +210,35 @@
       gap: 24px;
       justify-content: center;
     }
-    .modal-btn {
-      padding: 8px 24px;
-      border-radius: 6px;
-      border: none;
-      background: #ffe066;
-      color: #222;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 1em;
-      transition: background 0.15s;
-    }
-    .modal-btn:active {
-      background: #b89e4b;
-    }
+    .img-btn {
+  background: none;
+  border: none;
+  padding: 0 4px;
+  margin: 0 6px;
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.img-btn img {
+  width: 60px;
+  height: auto;
+
+
+  display: block;
+  filter: none;
+  transition: filter 0.14s, brightness 0.14s;
+}
+.img-btn:hover img {
+  filter: none;
+  filter: brightness(1.28);
+}
+.img-btn:active img {
+  filter: none;
+}
+
+
     .result-success {
       color: #7fff7a;
       font-weight: bold;
@@ -194,7 +253,78 @@
       margin-top: 12px;
       text-shadow: 0 0 8px #7f1f1f80;
     }
-  </style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+.upgrade-popup-content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+}
+.upgrade-item-display {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.item-display-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.item-img-on-bg {
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.item-img-on-bg img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  z-index: 1;
+}
+.item-img-on-bg .plus-label {
+  position: absolute;
+  bottom: 7px;
+  right: 7px;
+  background: #222c;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  color: #ffe066;
+  font-size: 1.1em;
+  border: 1px solid #ffe066;
+  text-shadow: 1px 1px 2px #000a;
+  z-index: 2;
+}
+.upgrade-popup-details {
+  color: #fff;
+  font-family: 'Press Start 2P', 'VT323', 'Pixel Emulator', monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  background: url('img/upgrade_text_background.png') center center no-repeat;
+  background-size: 100% 100%;
+  padding: 18px 18px 14px 18px;
+  min-width: 210px;
+  min-height: 138px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-left: -36px;
+  margin-right: 10px;
+  gap: 10px;
+}
+
+</style>
 </head>
 <body>
   <div id="modal-root"></div>
@@ -229,11 +359,19 @@
     <div class="item-img" id="item-img">
       <img src="img/zodiakschwert.png" alt="Sword">
     </div>
-    <div class="scroll-img" id="scroll-img">
-      <img src="img/segi.png" alt="Scroll">
+    <div class="scroll-img" id="scroll-img" style="position:absolute;left:332px;top:320px;width:48px;height:48px;z-index:2;">
+      <img src="img/segi.png" alt="Segi Scroll" style="width:100%;height:100%;cursor:pointer;" draggable="true">
+      <span id="scroll-count" style="position:absolute;bottom:2px;right:4px;background:rgba(20,20,20,0.78);color:#fff;font-family:'Press Start 2P','VT323','Pixel Emulator',monospace;font-size:11px;padding:1px 4px;border-radius:6px;pointer-events:none;user-select:none;">200</span>
     </div>
   </div>
   <script>
+let scrollCount = 200;
+function updateScrollCount() {
+  const el = document.getElementById('scroll-count');
+  if (el) el.textContent = scrollCount;
+}
+document.addEventListener('DOMContentLoaded', updateScrollCount);
+
     // --- Core Data ---
     const maxLevel = 9;
     let itemLevel = 0;
@@ -476,46 +614,92 @@ function placeScroll(e3) {
   // Block actions
   const modalRoot = document.getElementById('modal-root');
   modalRoot.innerHTML = `
-    <div class="upgrade-modal-bg" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#000a;z-index:9999;display:flex;align-items:center;justify-content:center;">
-      <div class="upgrade-modal" style="background:#222;border:2px solid #b89e4b;border-radius:12px;box-shadow:0 0 32px #000a;padding:24px 32px;min-width:320px;max-width:370px;text-align:center;position:relative;">
-        <div style="font-size:1.13em;color:#ffe066;margin-bottom:7px;font-family:serif;">Verbesserungen</div>
-        <div style="border:1px solid #666;padding:7px 14px 7px 7px;border-radius:6px;background:#191919;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px;">
-          <img src='img/zodiakschwert.png' alt='Sword' style="width:48px;height:48px;display:inline-block;border:1px solid #b89e4b;background:#181818;border-radius:6px;">
-          <div style="text-align:left;font-size:1em;">
-            <div style="color:#ffe066;font-weight:bold;">Oranges Zodiakschwert+${itemLevel}</div>
-            <div style="color:#ccc;font-size:0.98em;">Ab Lvl: 30</div>
-            <div style="color:#7fff7a;">Angriff ${itemStats[itemLevel].atk}</div>
-            <div style="color:#ff7a7a;">Stärke +${itemStats[itemLevel].str}</div>
-            <div style="margin:6px 0;color:#b0b0b0;">[Ausrüstbar]<br>Krieger</div>
+    <div class="upgrade-modal-bg">
+      <div class="upgrade-modal">
+        <div class="upgrade-modal-header" style="font-family: 'Press Start 2P', 'VT323', 'Pixel Emulator', monospace; color: #fff;">
+  <img src="img/upgrade_header.png" alt="Upgrade Header" class="upgrade-header-img">
+  <button id="upgrade-close" class="upgrade-close-btn">×</button>
+</div>
+        <div class="upgrade-popup-content" style="display:flex;flex-direction:row;align-items:center;gap:20px;">
+          <div class="upgrade-item-display" style="position:relative;width:104px;height:104px;">
+  <img src="img/upgrade_item_display.png" alt="Item Display" class="item-display-bg" style="width:100%;height:100%;object-fit:contain;">
+  <div class="item-img-on-bg" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+    <img src="img/zodiakschwert.png" alt="Sword" style="width:84px;height:84px;object-fit:contain;">
+  </div>
           </div>
-        </div>
-        <div style="color:#ffe066;font-size:1em;margin-bottom:6px;">Verbesserungskosten: <span style='color:#fff'>2500 Yang</span></div>
-        <div style="display:flex;justify-content:center;gap:28px;margin-top:12px;">
-          <button id="upgrade-ok" style="padding:7px 24px;border-radius:6px;border:none;background:#ffe066;color:#222;font-weight:bold;cursor:pointer;font-size:1em;">OK</button>
-          <button id="upgrade-cancel" style="padding:7px 24px;border-radius:6px;border:none;background:#444;color:#ffe066;font-weight:bold;cursor:pointer;font-size:1em;">Abbruch</button>
-        </div>
-        <button id="upgrade-close" style="position:absolute;top:8px;right:10px;background:none;border:none;font-size:1.3em;color:#ffe066;cursor:pointer;">×</button>
+          <div class="upgrade-popup-details">
+  <div>Zodiakschwert+${itemLevel}</div>
+  <div>Ab Lvl: 105</div>
+  <div style="color:#89b88d;">Angriffswert ${[
+    '149-211','157-219','160-222','166-228','175-237','189-251','208-270','237-299','282-344','349-411'][itemLevel]
+  }</div>
+  <div style="color:#89b88d;">Angriffsgeschwindigkeit +${[
+    18,19,20,21,22,23,24,25,26,27][itemLevel]}%</div>
+  <div style="color:#B0DFB4;">Durchn. Schaden 49%</div>
+  <div style="color:#B0DFB4;">Fertigkeitsschaden 2%</div>
+  <div style="margin:6px 0;">[Ausrüstbar]<br>Krieger</div>
+  </div>
+</div>
+        <div style="color:#fff;font-family:'Press Start 2P','VT323','Pixel Emulator',monospace;font-size:11px;letter-spacing:0.5px;text-align:center;margin-bottom:6px;margin-top:15px;">Verbesserungskosten: <span>2500 Yang</span></div>        <div style="display:flex;justify-content:center;gap:28px;margin-top:12px;">
+  <button id="upgrade-ok" class="img-btn"><img src="img/okay_button.png" alt="OK" /></button>
+  <button id="upgrade-cancel" class="img-btn"><img src="img/abbruch_button.png" alt="Abbruch" /></button>
+</div>
+        
       </div>
     </div>
   `;
   modalOpen = true;
   // Block all actions
   document.getElementById('upgrade-ok').onclick = () => {
-    modalRoot.innerHTML = '';
-    modalOpen = false;
-    scrollImg.classList.remove('hide-on-modal');
-    // TODO: upgrade logic
+    // Upgrade chances for segi.png scroll
+    if (scrollCount <= 0) return;
+    scrollCount = Math.max(0, scrollCount - 1);
+    updateScrollCount();
+    const segiChances = [0.9, 0.75, 0.6, 0.45, 0.3, 0.2, 0.1, 0.08, 0.03]; // for +0 to +8 (to +1 to +9)
+    let upgradeChance = segiChances[itemLevel] || 0.03; // Default to last value if out of bounds
+    // In future: switch based on scroll type
+    const wasSuccess = Math.random() < upgradeChance;
+    if (wasSuccess) {
+      itemLevel = Math.min(itemLevel + 1, 9);
+      showResultPopup(true);
+    } else {
+      itemLevel = Math.max(itemLevel - 1, 0);
+      showResultPopup(false);
+    }
   };
+
+  function showResultPopup(isSuccess) {
+    modalRoot.innerHTML = `
+      <div class="upgrade-modal-bg" id="result-popup-bg" style="z-index:999;cursor:pointer;">
+        <div class="upgrade-modal" style="background:none;box-shadow:none;display:flex;justify-content:center;align-items:center;">
+          <img src="img/${isSuccess ? 'success_popup.png' : 'failed_popup.png'}" alt="${isSuccess ? 'Erfolg' : 'Fehlschlag'}" style="display:block;width:280px;max-width:90vw;height:auto;pointer-events:none;" />
+        </div>
+      </div>
+    `;
+    modalOpen = true;
+    // Close popup on any click (attach to bg, not modalRoot)
+    const bg = document.getElementById('result-popup-bg');
+    if (bg) {
+      bg.onclick = () => {
+        modalRoot.innerHTML = '';
+        modalOpen = false;
+        scrollImg.classList.remove('hide-on-modal');
+      };
+    }
+  }
   document.getElementById('upgrade-cancel').onclick = () => {
     modalRoot.innerHTML = '';
     modalOpen = false;
     scrollImg.classList.remove('hide-on-modal');
   };
-  document.getElementById('upgrade-close').onclick = () => {
-    modalRoot.innerHTML = '';
-    modalOpen = false;
-    scrollImg.classList.remove('hide-on-modal');
-  };
+  var closeBtn = document.getElementById('upgrade-close');
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      modalRoot.innerHTML = '';
+      modalOpen = false;
+      scrollImg.classList.remove('hide-on-modal');
+    };
+  }
 }
 
 function setScrollPos(col, row) {
