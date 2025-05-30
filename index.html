@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metin2 Upgrade Simulator</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: #18181a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .upgrade-window {
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      display: flex;
+      gap: 0;
+      min-width: 0;
+      position: static;
+    }
+    .scroll-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      min-width: 90px;
+    }
+    .hide-on-modal {
+  display: none !important;
+}
+.scroll-img {
+      position: absolute;
+      z-index: 9999 !important;
+
+      background: none;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      width: auto;
+      height: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+      cursor: grab;
+      transition: none;
+    }
+    .scroll-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .item-panel {
+      position: relative;
+      background: url('img/inventar.png') center/contain no-repeat;
+      background-size: contain;
+      width: 320px;
+      height: 378px;
+      box-sizing: border-box;
+      display: block;
+      user-select: none;
+    }
+    .gridlines {
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .item-img {
+      width: 96px;
+      height: 96px;
+      /* No border, background, or shadow for transparent overlay */
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+      background: none;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+    }
+    .item-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .plus-label {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      background: #222c;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: bold;
+      color: #ffe066;
+      font-size: 1.1em;
+      border: 1px solid #ffe066;
+      text-shadow: 1px 1px 2px #000a;
+    }
+    .stats {
+      margin-top: 8px;
+      background: #222c;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 1em;
+      color: #ffe9a7;
+      min-width: 120px;
+      text-align: center;
+      border: 1px solid #444;
+    }
+    .upgrade-btn {
+      margin-top: 18px;
+      padding: 10px 36px;
+      background: linear-gradient(90deg,#b89e4b 40%,#ffe066 100%);
+      color: #222;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 1.1em;
+      cursor: pointer;
+      box-shadow: 0 0 8px #b89e4b80;
+      transition: background 0.18s, box-shadow 0.18s;
+    }
+    .upgrade-btn:active {
+      background: linear-gradient(90deg,#ffe066 40%,#b89e4b 100%);
+      box-shadow: 0 0 18px #ffe06680;
+    }
+    /* Modal */
+    .modal-bg {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #000a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .modal {
+      background: #24231f;
+      border: 2px solid #b89e4b;
+      border-radius: 12px;
+      box-shadow: 0 0 32px #000a;
+      padding: 32px 40px;
+      text-align: center;
+      min-width: 320px;
+    }
+    .modal .item-img {
+      width: 72px;
+      height: 72px;
+      margin-bottom: 8px;
+    }
+    .modal-btns {
+      margin-top: 24px;
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+    }
+    .modal-btn {
+      padding: 8px 24px;
+      border-radius: 6px;
+      border: none;
+      background: #ffe066;
+      color: #222;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.15s;
+    }
+    .modal-btn:active {
+      background: #b89e4b;
+    }
+    .result-success {
+      color: #7fff7a;
+      font-weight: bold;
+      font-size: 1.2em;
+      margin-top: 12px;
+      text-shadow: 0 0 8px #1f7f1f80;
+    }
+    .result-fail {
+      color: #ff7a7a;
+      font-weight: bold;
+      font-size: 1.2em;
+      margin-top: 12px;
+      text-shadow: 0 0 8px #7f1f1f80;
+    }
+  </style>
+</head>
+<body>
+  <div id="modal-root"></div>
+  <div id="controls" style="display:none;">
+    <div style="margin-bottom:8px;font-weight:bold;">Grid Controls</div>
+    <div style="display:grid;grid-template-columns:90px 38px 38px 38px 38px;align-items:center;gap:2px 6px;">
+      <span>X (left)</span>
+      <button id="gx-" style="width:34px;">-</button>
+      <span id="gxv"></span>
+      <button id="gx+" style="width:34px;">+</button>
+      <span></span>
+      <span>Y (top)</span>
+      <button id="gy-">-</button>
+      <span id="gyv"></span>
+      <button id="gy+">+</button>
+      <span></span>
+      <span>W (width)</span>
+      <button id="gw-">-</button>
+      <span id="gwv"></span>
+      <button id="gw+">+</button>
+      <span></span>
+      <span>H (height)</span>
+      <button id="gh-">-</button>
+      <span id="ghv"></span>
+      <button id="gh+">+</button>
+      <span></span>
+    </div>
+    <div style="margin-top:10px;font-size:0.95em;line-height:1.3;">gridX: <span id="gxv2"></span><br>gridY: <span id="gyv2"></span><br>gridW: <span id="gwv2"></span><br>gridH: <span id="ghv2"></span></div>
+  </div>
+  <div class="item-panel" id="item-panel">
+    <canvas class="gridlines" id="gridlines"></canvas>
+    <div class="item-img" id="item-img">
+      <img src="img/zodiakschwert.png" alt="Sword">
+    </div>
+    <div class="scroll-img" id="scroll-img">
+      <img src="img/segi.png" alt="Scroll">
+    </div>
+  </div>
+  <script>
+    // --- Core Data ---
+    const maxLevel = 9;
+    let itemLevel = 0;
+    let itemStats = [
+      {atk: 25, str: 4}, // +0
+      {atk: 28, str: 5},
+      {atk: 31, str: 6},
+      {atk: 35, str: 8},
+      {atk: 39, str: 10},
+      {atk: 44, str: 13},
+      {atk: 50, str: 16},
+      {atk: 57, str: 20},
+      {atk: 65, str: 25},
+      {atk: 74, str: 30}, // +9
+    ];
+    // Success rates per level (Metin2-inspired, not exact)
+    const upgradeChances = [
+      1.00, // +0 -> +1
+      0.90, // +1 -> +2
+      0.80, // +2 -> +3
+      0.65, // +3 -> +4
+      0.50, // +4 -> +5
+      0.35, // +5 -> +6
+      0.25, // +6 -> +7
+      0.15, // +7 -> +8
+      0.08, // +8 -> +9
+    ];
+    // --- UI Elements ---
+    const plusLabel = document.getElementById('plus-label');
+    const itemStatsDiv = document.getElementById('item-stats');
+    const upgradeBtn = document.getElementById('upgrade-btn');
+    const scrollImg = document.getElementById('scroll-img');
+    const modalRoot = document.getElementById('modal-root');
+    // --- Functions ---
+// Global moveGhost for scroll drag
+function moveGhost(e2) {
+  if (!ghostScroll) return;
+  let panelRect = panel.getBoundingClientRect();
+  let x = e2.clientX - panelRect.left - gridX;
+  let y = e2.clientY - panelRect.top - gridY;
+  let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
+  let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
+  let px = gridX + col * getCellW();
+  let py = gridY + row * getCellH();
+  ghostScroll.style.left = (panelRect.left + px) + 'px';
+  ghostScroll.style.top = (panelRect.top + py) + 'px';
+  ghostScroll.style.width = getScrollW()+'px';
+  ghostScroll.style.height = getScrollH()+'px';
+}
+
+// Global placeScroll for scroll drag
+let modalOpen = false;
+
+function stopAllDragging() {
+  moving = false;
+  if (ghostSword) {
+    if (ghostSword.parentNode) ghostSword.remove();
+    ghostSword = null;
+    document.removeEventListener('mousemove', moveSwordGhost);
+    document.removeEventListener('mousedown', placeSword, true);
+  }
+  if (ghostScroll) {
+    if (ghostScroll.parentNode) ghostScroll.remove();
+    ghostScroll = null;
+    document.removeEventListener('mousemove', moveGhost);
+    document.removeEventListener('mousedown', placeScroll, true);
+  }
+}
+
+function placeScroll(e3) {
+  document.removeEventListener('mousemove', moveGhost);
+  document.removeEventListener('mousedown', placeScroll, true);
+  if (ghostScroll) {
+    let panelRect = panel.getBoundingClientRect();
+    let x = e3.clientX - panelRect.left - gridX;
+    let y = e3.clientY - panelRect.top - gridY;
+    let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
+    let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
+    setScrollPos(col, row);
+    if (ghostScroll && ghostScroll.parentNode) ghostScroll.remove();
+    ghostScroll = null;
+  }
+  // Stop all dragging (sword and scroll)
+  stopAllDragging();
+}
+
+    function updateItemUI() {
+      plusLabel.textContent = `+${itemLevel}`;
+      const stats = itemStats[itemLevel];
+      itemStatsDiv.innerHTML = `ATK: ${stats.atk}<br>STR: ${stats.str}`;
+    }
+    function showUpgradeModal() {
+      const nextLevel = Math.min(itemLevel + 1, maxLevel);
+      const stats = itemStats[nextLevel];
+      modalRoot.innerHTML = `
+        <div class="modal-bg">
+          <div class="modal">
+            <div style="font-size:1.1em;color:#ffe066;margin-bottom:8px;">Upgrade Preview</div>
+            <div class="item-img">
+              <img src='img/zodiakschwert.png' alt='Sword'>
+              <div class="plus-label">+${nextLevel}</div>
+            </div>
+            <div class="stats" style="margin-bottom:8px;">ATK: ${stats.atk}<br>STR: ${stats.str}</div>
+            <div class="modal-btns">
+              <button class="modal-btn" id="confirm-upgrade">OK</button>
+              <button class="modal-btn" id="cancel-upgrade">Cancel</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('confirm-upgrade').onclick = () => {
+        modalRoot.innerHTML = '';
+        doUpgrade();
+      };
+      document.getElementById('cancel-upgrade').onclick = () => {
+        modalRoot.innerHTML = '';
+      };
+    }
+    function showResultModal(success) {
+      modalRoot.innerHTML = `
+        <div class="modal-bg">
+          <div class="modal">
+            <div style="font-size:1.1em;color:#ffe066;margin-bottom:8px;">Upgrade Result</div>
+            <div class="item-img">
+              <img src='img/zodiakschwert.png' alt='Sword'>
+              <div class="plus-label">+${itemLevel}</div>
+            </div>
+            <div class="stats" style="margin-bottom:8px;">ATK: ${itemStats[itemLevel].atk}<br>STR: ${itemStats[itemLevel].str}</div>
+            <div class="${success ? 'result-success' : 'result-fail'}">
+              ${success ? 'Success!' : 'Failed!'}
+            </div>
+            <div class="modal-btns">
+              <button class="modal-btn" id="close-result">Close</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('close-result').onclick = () => {
+        modalRoot.innerHTML = '';
+      };
+    }
+    function doUpgrade() {
+      if (itemLevel >= maxLevel) return;
+      const chance = upgradeChances[itemLevel];
+      const roll = Math.random();
+      if (roll < chance) {
+        itemLevel++;
+        updateItemUI();
+        showResultModal(true);
+      } else {
+        showResultModal(false);
+      }
+    }
+    const gridCols = 5;
+    const gridRows = 9;
+    let gridX = 71;
+    let gridY = 58;
+    let gridW = 181;
+    let gridH = 317;
+    const panelW = 320;
+    const panelH = 378;
+    function getCellW() { return gridW / gridCols; }
+    function getCellH() { return gridH / gridRows; }
+    const swordGridW = 1;
+    const swordGridH = 2;
+    function getSwordW() { return getCellW() * swordGridW; }
+    function getSwordH() { return getCellH() * swordGridH; }
+    let swordCol = 2;
+    let swordRow = 4;
+
+    // Scroll (1x1 cell)
+    const scrollGridW = 1;
+    const scrollGridH = 1;
+    function getScrollW() { return getCellW(); }
+    function getScrollH() { return getCellH(); }
+    let scrollCol = 0;
+    let scrollRow = 0; // default top-left
+
+    // Draw gridlines
+    const gridlines = document.getElementById('gridlines');
+    gridlines.width = panelW;
+    gridlines.height = panelH;
+    const ctx = gridlines.getContext('2d');
+    function drawGridlines() {
+      ctx.clearRect(0,0,gridlines.width,gridlines.height);
+      ctx.strokeStyle = 'rgba(255,255,255,0)';
+      ctx.lineWidth = 1.5;
+      // Draw vertical grid lines
+      for(let i=0; i<=gridCols; ++i) {
+        ctx.beginPath();
+        ctx.moveTo(gridX + i*getCellW(), gridY);
+        ctx.lineTo(gridX + i*getCellW(), gridY + gridH);
+        ctx.stroke();
+      }
+      // Draw horizontal grid lines
+      for(let j=0; j<=gridRows; ++j) {
+        ctx.beginPath();
+        ctx.moveTo(gridX, gridY + j*getCellH());
+        ctx.lineTo(gridX + gridW, gridY + j*getCellH());
+        ctx.stroke();
+      }
+    }
+    drawGridlines();
+
+    // Sword movement
+    let moving = false;
+    let ghostSword = null;
+    let ghostScroll = null; // <--- global for scroll drag ghost
+    const panel = document.getElementById('item-panel');
+    const itemImg = document.getElementById('item-img');
+
+    function setSwordPos(col, row) {
+      // Prevent overflow
+      col = Math.max(0, Math.min(gridCols - swordGridW, col));
+      row = Math.max(0, Math.min(gridRows - swordGridH, row));
+      // Prevent overlap with scroll
+      if (col < scrollCol + scrollGridW && col + swordGridW > scrollCol &&
+          row < scrollRow + scrollGridH && row + swordGridH > scrollRow) {
+        // overlap, don't move
+        col = swordCol;
+        row = swordRow;
+      }
+      swordCol = col;
+      swordRow = row;
+      itemImg.style.left = (gridX + swordCol*getCellW()) + 'px';
+      itemImg.style.top = (gridY + swordRow*getCellH()) + 'px';
+      itemImg.style.width = getSwordW()+'px';
+      itemImg.style.height = getSwordH()+'px';
+    }
+    setSwordPos(swordCol, swordRow);
+
+    function showUpgradePopup() {
+  // Hide scroll item
+  scrollImg.classList.add('hide-on-modal');
+  // Hide scroll ghost if present
+  if (ghostScroll && ghostScroll.parentNode) {
+    ghostScroll.remove();
+    ghostScroll = null;
+  }
+  // Block actions
+  const modalRoot = document.getElementById('modal-root');
+  modalRoot.innerHTML = `
+    <div class="upgrade-modal-bg" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#000a;z-index:9999;display:flex;align-items:center;justify-content:center;">
+      <div class="upgrade-modal" style="background:#222;border:2px solid #b89e4b;border-radius:12px;box-shadow:0 0 32px #000a;padding:24px 32px;min-width:320px;max-width:370px;text-align:center;position:relative;">
+        <div style="font-size:1.13em;color:#ffe066;margin-bottom:7px;font-family:serif;">Verbesserungen</div>
+        <div style="border:1px solid #666;padding:7px 14px 7px 7px;border-radius:6px;background:#191919;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px;">
+          <img src='img/zodiakschwert.png' alt='Sword' style="width:48px;height:48px;display:inline-block;border:1px solid #b89e4b;background:#181818;border-radius:6px;">
+          <div style="text-align:left;font-size:1em;">
+            <div style="color:#ffe066;font-weight:bold;">Oranges Zodiakschwert+${itemLevel}</div>
+            <div style="color:#ccc;font-size:0.98em;">Ab Lvl: 30</div>
+            <div style="color:#7fff7a;">Angriff ${itemStats[itemLevel].atk}</div>
+            <div style="color:#ff7a7a;">Stärke +${itemStats[itemLevel].str}</div>
+            <div style="margin:6px 0;color:#b0b0b0;">[Ausrüstbar]<br>Krieger</div>
+          </div>
+        </div>
+        <div style="color:#ffe066;font-size:1em;margin-bottom:6px;">Verbesserungskosten: <span style='color:#fff'>2500 Yang</span></div>
+        <div style="display:flex;justify-content:center;gap:28px;margin-top:12px;">
+          <button id="upgrade-ok" style="padding:7px 24px;border-radius:6px;border:none;background:#ffe066;color:#222;font-weight:bold;cursor:pointer;font-size:1em;">OK</button>
+          <button id="upgrade-cancel" style="padding:7px 24px;border-radius:6px;border:none;background:#444;color:#ffe066;font-weight:bold;cursor:pointer;font-size:1em;">Abbruch</button>
+        </div>
+        <button id="upgrade-close" style="position:absolute;top:8px;right:10px;background:none;border:none;font-size:1.3em;color:#ffe066;cursor:pointer;">×</button>
+      </div>
+    </div>
+  `;
+  modalOpen = true;
+  // Block all actions
+  document.getElementById('upgrade-ok').onclick = () => {
+    modalRoot.innerHTML = '';
+    modalOpen = false;
+    scrollImg.classList.remove('hide-on-modal');
+    // TODO: upgrade logic
+  };
+  document.getElementById('upgrade-cancel').onclick = () => {
+    modalRoot.innerHTML = '';
+    modalOpen = false;
+    scrollImg.classList.remove('hide-on-modal');
+  };
+  document.getElementById('upgrade-close').onclick = () => {
+    modalRoot.innerHTML = '';
+    modalOpen = false;
+    scrollImg.classList.remove('hide-on-modal');
+  };
+}
+
+function setScrollPos(col, row) {
+  // Prevent overflow
+  col = Math.max(0, Math.min(gridCols - scrollGridW, col));
+  row = Math.max(0, Math.min(gridRows - scrollGridH, row));
+  // Check overlap with sword
+  if (col < swordCol + swordGridW && col + scrollGridW > swordCol &&
+      row < swordRow + swordGridH && row + scrollGridH > swordRow) {
+    // Show upgrade popup, but do NOT move scroll (ghost stays visible)
+    showUpgradePopup();
+    modalOpen = true;
+    // Cancel any ongoing drag
+    stopAllDragging();
+    // Do not update scrollCol/scrollRow or DOM position here
+    return;
+  }
+  scrollCol = col;
+  scrollRow = row;
+  scrollImg.style.left = (gridX + scrollCol*getCellW()) + 'px';
+  scrollImg.style.top = (gridY + scrollRow*getCellH()) + 'px';
+  scrollImg.style.width = getScrollW()+'px';
+  scrollImg.style.height = getScrollH()+'px';
+}
+    setScrollPos(scrollCol, scrollRow);
+
+    function updateControlDisplay() {
+      document.getElementById('gxv').textContent = gridX;
+      document.getElementById('gyv').textContent = gridY;
+      document.getElementById('gwv').textContent = gridW;
+      document.getElementById('ghv').textContent = gridH;
+      document.getElementById('gxv2').textContent = gridX;
+      document.getElementById('gyv2').textContent = gridY;
+      document.getElementById('gwv2').textContent = gridW;
+      document.getElementById('ghv2').textContent = gridH;
+    }
+    updateControlDisplay();
+
+    ['gx','gy','gw','gh'].forEach(axis => {
+      document.getElementById(axis+'-').onclick = () => {
+        if(axis==='gx') gridX -= 1;
+        if(axis==='gy') gridY -= 1;
+        if(axis==='gw') gridW -= 1;
+        if(axis==='gh') gridH -= 1;
+        drawGridlines(); setSwordPos(swordCol, swordRow); setScrollPos(scrollCol, scrollRow); updateControlDisplay();
+      };
+      document.getElementById(axis+'+').onclick = () => {
+        if(axis==='gx') gridX += 1;
+        if(axis==='gy') gridY += 1;
+        if(axis==='gw') gridW += 1;
+        if(axis==='gh') gridH += 1;
+        drawGridlines(); setSwordPos(swordCol, swordRow); setScrollPos(scrollCol, scrollRow); updateControlDisplay();
+      };
+    });
+
+    itemImg.addEventListener('mousedown', e => {
+  if (modalOpen) return;
+  // Prevent sword drag if a drag is already in progress (e.g. scroll drag)
+  if (moving) return;
+  // Prevent sword drag if pointer is over scroll
+  const scrollRect = scrollImg.getBoundingClientRect();
+  if (
+    e.clientX >= scrollRect.left && e.clientX <= scrollRect.right &&
+    e.clientY >= scrollRect.top && e.clientY <= scrollRect.bottom
+  ) {
+    return;
+  }
+  if (e.button !== 0) return;
+  moving = true;
+      // Create ghost sword
+      ghostSword = document.createElement('div');
+      ghostSword.className = 'item-img';
+      ghostSword.style.position = 'absolute';
+      ghostSword.style.pointerEvents = 'none';
+      ghostSword.style.opacity = '0.5';
+      ghostSword.style.width = getSwordW() + 'px';
+      ghostSword.style.height = getSwordH() + 'px';
+      ghostSword.style.zIndex = '9999';
+      let ghostImg = document.createElement('img');
+      ghostImg.src = 'img/zodiakschwert.png';
+      ghostImg.alt = 'Sword';
+      ghostSword.appendChild(ghostImg);
+      document.body.appendChild(ghostSword);
+
+      function moveGhost(e2) {
+        let panelRect = panel.getBoundingClientRect();
+        // Snap ghost sword's top-left to grid
+        let x = e2.clientX - panelRect.left - gridX;
+        let y = e2.clientY - panelRect.top - gridY;
+        let col = Math.max(0, Math.min(gridCols - swordGridW, Math.floor(x / getCellW())));
+        let row = Math.max(0, Math.min(gridRows - swordGridH, Math.floor(y / getCellH())));
+        // Prevent overlap with scroll
+        if (col < scrollCol + scrollGridW && col + swordGridW > scrollCol &&
+            row < scrollRow + scrollGridH && row + swordGridH > scrollRow) {
+          col = swordCol;
+          row = swordRow;
+        }
+        let px = gridX + col * getCellW();
+        let py = gridY + row * getCellH();
+        ghostSword.style.left = (panelRect.left + px) + 'px';
+        ghostSword.style.top = (panelRect.top + py) + 'px';
+        ghostSword.style.width = getSwordW()+'px';
+        ghostSword.style.height = getSwordH()+'px';
+      }
+      function placeSword(e3) {
+        document.removeEventListener('mousemove', moveGhost);
+        document.removeEventListener('mousedown', placeSword, true);
+        if (ghostSword) {
+          let panelRect = panel.getBoundingClientRect();
+          let x = e3.clientX - panelRect.left - gridX;
+          let y = e3.clientY - panelRect.top - gridY;
+          let col = Math.max(0, Math.min(gridCols - swordGridW, Math.floor(x / getCellW())));
+          let row = Math.max(0, Math.min(gridRows - swordGridH, Math.floor(y / getCellH())));
+          setSwordPos(col, row);
+          ghostSword.remove();
+          ghostSword = null;
+        }
+        moving = false;
+      }
+      // Immediately position ghost at mouse on spawn
+      moveGhost(e);
+      document.addEventListener('mousemove', moveGhost);
+      document.addEventListener('mousedown', placeSword, true);
+    });
+
+    // --- Scroll drag and drop ---
+    scrollImg.addEventListener('mousedown', e => {
+      if (modalOpen) return;
+      if (e.button !== 0) return;
+      if (moving) return;
+      moving = true;
+      // Create ghost scroll
+      ghostScroll = document.createElement('div');
+      ghostScroll.className = 'scroll-img';
+      ghostScroll.style.position = 'absolute';
+      ghostScroll.style.pointerEvents = 'none';
+      ghostScroll.style.opacity = '0.7'; // More visible
+      ghostScroll.style.width = getScrollW() + 'px';
+      ghostScroll.style.height = getScrollH() + 'px';
+      ghostScroll.style.zIndex = '9999';
+      let ghostImg = document.createElement('img');
+      ghostImg.src = 'img/segi.png';
+      ghostImg.alt = 'Scroll';
+      ghostScroll.appendChild(ghostImg);
+      document.body.appendChild(ghostScroll);
+      // Always ensure ghostScroll is the last child for stacking
+      document.body.appendChild(ghostScroll); // re-append to ensure top
+
+
+
+      moveGhost(e);
+      document.addEventListener('mousemove', moveGhost);
+      document.addEventListener('mousedown', placeScroll, true);
+    });
+  </script>
+</body>
+</html>
