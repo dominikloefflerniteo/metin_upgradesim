@@ -458,6 +458,8 @@ function moveDragonGhost(e2) {
 
 // Global placeScroll for scroll drag
 let modalOpen = false;
+// Track which scroll type was last used for upgrade
+let lastUsedScrollType = 'normal'; // 'normal' or 'dragon'
 // Dragon scroll drag ghost
 let ghostDragonScroll = null;
 
@@ -509,11 +511,26 @@ function placeDragonScroll(e3) {
     let y = e3.clientY - panelRect.top - gridY;
     let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
     let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
-    setDragonScrollPos(col, row);
-    if (ghostDragonScroll && ghostDragonScroll.parentNode) ghostDragonScroll.remove();
+    
+    // Check if dragon scroll is dropped on sword (for upgrade)
+    if (col < swordCol + swordGridW && col + scrollGridW > swordCol &&
+        row < swordRow + swordGridH && row + scrollGridH > swordRow) {
+      // Set the last used scroll type to dragon
+      lastUsedScrollType = 'dragon';
+      // Show upgrade popup for dragon scroll
+      showUpgradePopup();
+      modalOpen = true;
+    } else {
+      // Otherwise just place the dragon scroll
+      setDragonScrollPos(col, row);
+    }
+    
+    if (ghostDragonScroll && ghostDragonScroll.parentNode) {
+      ghostDragonScroll.remove();
+    }
     ghostDragonScroll = null;
   }
-  stopAllDragging();
+  moving = false;
 }
 
     function updateItemUI() {
@@ -666,12 +683,17 @@ function placeDragonScroll(e3) {
     setSwordPos(swordCol, swordRow);
 
     function showUpgradePopup() {
-  // Hide scroll item
+  // Hide scroll items
   scrollImg.classList.add('hide-on-modal');
-  // Hide scroll ghost if present
+  dragonScrollImg.classList.add('hide-on-modal');
+  // Hide scroll ghosts if present
   if (ghostScroll && ghostScroll.parentNode) {
     ghostScroll.remove();
     ghostScroll = null;
+  }
+  if (ghostDragonScroll && ghostDragonScroll.parentNode) {
+    ghostDragonScroll.remove();
+    ghostDragonScroll = null;
   }
   // Block actions
   const modalRoot = document.getElementById('modal-root');
@@ -713,13 +735,28 @@ function placeDragonScroll(e3) {
   modalOpen = true;
   // Block all actions
   document.getElementById('upgrade-ok').onclick = () => {
-    // Upgrade chances for segi.png scroll
-    if (scrollCount <= 0) return;
-    scrollCount = Math.max(0, scrollCount - 1);
+    // Check if we have enough scrolls of the last used type
+    if ((lastUsedScrollType === 'normal' && scrollCount <= 0) || 
+        (lastUsedScrollType === 'dragon' && dragonScrollCount <= 0)) {
+      return;
+    }
+    
+    // Decrement the correct scroll count
+    if (lastUsedScrollType === 'normal') {
+      scrollCount--;
+    } else {
+      dragonScrollCount--;
+    }
     updateScrollCount();
-    const segiChances = [0.9, 0.75, 0.6, 0.45, 0.3, 0.2, 0.1, 0.08, 0.03]; // for +0 to +8 (to +1 to +9)
-    let upgradeChance = segiChances[itemLevel] || 0.03; // Default to last value if out of bounds
-    // In future: switch based on scroll type
+    
+    // Define upgrade chances for each scroll type
+    const normalChances = [0.9, 0.75, 0.6, 0.45, 0.3, 0.2, 0.1, 0.08, 0.03]; // for +0 to +8 (to +1 to +9)
+    const dragonChances = [0.95, 0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25, 0.15]; // Better chances for dragon scroll
+    
+    // Get the appropriate chance based on scroll type
+    const chances = lastUsedScrollType === 'normal' ? normalChances : dragonChances;
+    let upgradeChance = chances[itemLevel] || 0.03; // Default to last value if out of bounds
+    
     const wasSuccess = Math.random() < upgradeChance;
     if (wasSuccess) {
       itemLevel = Math.min(itemLevel + 1, 9);
@@ -746,6 +783,7 @@ function placeDragonScroll(e3) {
         modalRoot.innerHTML = '';
         modalOpen = false;
         scrollImg.classList.remove('hide-on-modal');
+        dragonScrollImg.classList.remove('hide-on-modal');
       };
     }
   }
@@ -753,6 +791,7 @@ function placeDragonScroll(e3) {
     modalRoot.innerHTML = '';
     modalOpen = false;
     scrollImg.classList.remove('hide-on-modal');
+    dragonScrollImg.classList.remove('hide-on-modal');
   };
   var closeBtn = document.getElementById('upgrade-close');
   if (closeBtn) {
@@ -760,6 +799,7 @@ function placeDragonScroll(e3) {
       modalRoot.innerHTML = '';
       modalOpen = false;
       scrollImg.classList.remove('hide-on-modal');
+      dragonScrollImg.classList.remove('hide-on-modal');
     };
   }
 }
@@ -948,47 +988,7 @@ function setDragonScrollPos(col, row) {
       ghostDragonScroll.appendChild(ghostImg);
       document.body.appendChild(ghostDragonScroll);
       
-      function moveDragonGhost(e2) {
-        let panelRect = panel.getBoundingClientRect();
-        // Snap ghost scroll's top-left to grid
-        let x = e2.clientX - panelRect.left - gridX;
-        let y = e2.clientY - panelRect.top - gridY;
-        let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
-        let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
-        let px = gridX + col * getCellW();
-        let py = gridY + row * getCellH();
-        ghostDragonScroll.style.left = (panelRect.left + px) + 'px';
-        ghostDragonScroll.style.top = (panelRect.top + py) + 'px';
-        ghostDragonScroll.style.width = getScrollW()+'px';
-        ghostDragonScroll.style.height = getScrollH()+'px';
-      }
-      
-      function placeDragonScroll(e3) {
-        document.removeEventListener('mousemove', moveDragonGhost);
-        document.removeEventListener('mousedown', placeDragonScroll, true);
-        if (ghostDragonScroll) {
-          let panelRect = panel.getBoundingClientRect();
-          let x = e3.clientX - panelRect.left - gridX;
-          let y = e3.clientY - panelRect.top - gridY;
-          let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
-          let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
-          
-          // Check if dragon scroll is dropped on sword (for upgrade)
-          if (col < swordCol + swordGridW && col + scrollGridW > swordCol &&
-              row < swordRow + swordGridH && row + scrollGridH > swordRow) {
-            // Show upgrade popup for dragon scroll
-            showUpgradePopup();
-            modalOpen = true;
-          } else {
-            // Otherwise just place the dragon scroll
-            setDragonScrollPos(col, row);
-          }
-          
-          ghostDragonScroll.remove();
-          ghostDragonScroll = null;
-        }
-        moving = false;
-      }
+      // Using the global moveDragonGhost and placeDragonScroll functions
       
       // Immediately position ghost at mouse on spawn
       moveDragonGhost(e);
