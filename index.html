@@ -547,17 +547,25 @@ body::before {
       <img src="img/drachensegi.png" alt="Dragon Scroll" style="width:100%;height:100%;cursor:pointer;" draggable="false">
       <span id="dragon-scroll-count" style="position:absolute;bottom:2px;right:4px;background:rgba(20,20,20,0.78);color:#fff;font-family:'Press Start 2P','VT323','Pixel Emulator',monospace;font-size:11px;padding:1px 4px;border-radius:6px;pointer-events:none;user-select:none;">10</span>
     </div>
+    <div class="scroll-img" id="handbook-scroll-img" style="position:absolute;left:120px;top:58px;width:36px;height:36px;z-index:2;">
+      <img src="img/handbook.png" alt="Handbook Scroll" style="width:100%;height:100%;cursor:pointer;" draggable="false">
+      <span id="handbook-scroll-count" style="position:absolute;bottom:2px;right:4px;background:rgba(20,20,20,0.78);color:#fff;font-family:'Press Start 2P','VT323','Pixel Emulator',monospace;font-size:11px;padding:1px 4px;border-radius:6px;pointer-events:none;user-select:none;">5</span>
+    </div>
   </div>
   <script>
 let scrollCount = 200;
 let dragonScrollCount = 10;
+let handbookScrollCount = 5;
 let normalScrollsUsed = 0;
 let dragonScrollsUsed = 0;
+let handbookScrollsUsed = 0;
 function updateScrollCount() {
   const el = document.getElementById('scroll-count');
   if (el) el.textContent = scrollCount;
   const dragonEl = document.getElementById('dragon-scroll-count');
   if (dragonEl) dragonEl.textContent = dragonScrollCount;
+  const handbookEl = document.getElementById('handbook-scroll-count');
+  if (handbookEl) handbookEl.textContent = handbookScrollCount;
 }
 // Background switching functionality
 document.addEventListener('DOMContentLoaded', () => {
@@ -732,13 +740,31 @@ function moveDragonGhost(e2) {
   ghostDragonScroll.style.height = getScrollH()+'px';
 }
 
+// Handbook scroll drag logic
+function moveHandbookGhost(e2) {
+  if (!ghostHandbookScroll) return;
+  let panelRect = panel.getBoundingClientRect();
+  let x = e2.clientX - panelRect.left - gridX;
+  let y = e2.clientY - panelRect.top - gridY;
+  let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
+  let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
+  let px = gridX + col * getCellW();
+  let py = gridY + row * getCellH();
+  ghostHandbookScroll.style.left = (panelRect.left + px) + 'px';
+  ghostHandbookScroll.style.top = (panelRect.top + py) + 'px';
+  ghostHandbookScroll.style.width = getScrollW()+'px';
+  ghostHandbookScroll.style.height = getScrollH()+'px';
+}
+
 
 // Global placeScroll for scroll drag
 let modalOpen = false;
 // Track which scroll type was last used for upgrade
-let lastUsedScrollType = 'normal'; // 'normal' or 'dragon'
+let lastUsedScrollType = 'normal'; // 'normal', 'dragon', or 'handbook'
 // Dragon scroll drag ghost
 let ghostDragonScroll = null;
+// Handbook scroll drag ghost
+let ghostHandbookScroll = null;
 
 function stopAllDragging() {
   moving = false;
@@ -759,6 +785,12 @@ function stopAllDragging() {
     ghostDragonScroll = null;
     document.removeEventListener('mousemove', moveDragonGhost);
     document.removeEventListener('mousedown', placeDragonScroll, true);
+  }
+  if (ghostHandbookScroll) {
+    if (ghostHandbookScroll.parentNode) ghostHandbookScroll.remove();
+    ghostHandbookScroll = null;
+    document.removeEventListener('mousemove', moveHandbookGhost);
+    document.removeEventListener('mousedown', placeHandbookScroll, true);
   }
 }
 
@@ -806,6 +838,38 @@ function placeDragonScroll(e3) {
       ghostDragonScroll.remove();
     }
     ghostDragonScroll = null;
+  }
+  moving = false;
+}
+
+// Place handbook scroll
+function placeHandbookScroll(e3) {
+  document.removeEventListener('mousemove', moveHandbookGhost);
+  document.removeEventListener('mousedown', placeHandbookScroll, true);
+  if (ghostHandbookScroll) {
+    let panelRect = panel.getBoundingClientRect();
+    let x = e3.clientX - panelRect.left - gridX;
+    let y = e3.clientY - panelRect.top - gridY;
+    let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
+    let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
+    
+    // Check if handbook scroll is dropped on sword (for upgrade)
+    if (col < swordCol + swordGridW && col + scrollGridW > swordCol &&
+        row < swordRow + swordGridH && row + scrollGridH > swordRow) {
+      // Set the last used scroll type to handbook
+      lastUsedScrollType = 'handbook';
+      // Show upgrade popup for handbook scroll
+      showUpgradePopup();
+      modalOpen = true;
+    } else {
+      // Otherwise just place the handbook scroll
+      setHandbookScrollPos(col, row);
+    }
+    
+    if (ghostHandbookScroll && ghostHandbookScroll.parentNode) {
+      ghostHandbookScroll.remove();
+    }
+    ghostHandbookScroll = null;
   }
   moving = false;
 }
@@ -906,6 +970,10 @@ function placeDragonScroll(e3) {
     let dragonScrollCol = 1;
     let dragonScrollRow = 0; // default position next to regular scroll
 
+    // Handbook scroll (1x1 cell)
+    let handbookScrollCol = 2;
+    let handbookScrollRow = 0; // default position next to dragon scroll
+
     // Add tooltip events to sword
     const swordElement = document.getElementById('item-img');
     if (swordElement) {
@@ -969,10 +1037,14 @@ function placeDragonScroll(e3) {
     }
     setSwordPos(swordCol, swordRow);
 
+
+
     function showUpgradePopup() {
   // Hide scroll items
   scrollImg.classList.add('hide-on-modal');
   dragonScrollImg.classList.add('hide-on-modal');
+  handbookScrollImg.classList.add('hide-on-modal');
+  handbookScrollImg.classList.add('hide-on-modal');
   // Hide scroll ghosts if present
   if (ghostScroll && ghostScroll.parentNode) {
     ghostScroll.remove();
@@ -981,6 +1053,10 @@ function placeDragonScroll(e3) {
   if (ghostDragonScroll && ghostDragonScroll.parentNode) {
     ghostDragonScroll.remove();
     ghostDragonScroll = null;
+  }
+  if (ghostHandbookScroll && ghostHandbookScroll.parentNode) {
+    ghostHandbookScroll.remove();
+    ghostHandbookScroll = null;
   }
   // Block actions
   const modalRoot = document.getElementById('modal-root');
@@ -1029,7 +1105,8 @@ function placeDragonScroll(e3) {
   document.getElementById('upgrade-ok').onclick = () => {
     // Check if we have enough scrolls of the last used type
     if ((lastUsedScrollType === 'normal' && scrollCount <= 0) || 
-        (lastUsedScrollType === 'dragon' && dragonScrollCount <= 0)) {
+        (lastUsedScrollType === 'dragon' && dragonScrollCount <= 0) || 
+        (lastUsedScrollType === 'handbook' && handbookScrollCount <= 0)) {
       return;
     }
     
@@ -1038,19 +1115,32 @@ function placeDragonScroll(e3) {
       scrollCount--;
       normalScrollsUsed++;
       document.getElementById('normal-scrolls-used').textContent = normalScrollsUsed;
-    } else {
+    } else if (lastUsedScrollType === 'dragon') {
       dragonScrollCount--;
       dragonScrollsUsed++;
       document.getElementById('dragon-scrolls-used').textContent = dragonScrollsUsed;
+    } else {
+      handbookScrollCount--;
+      handbookScrollsUsed++;
+      document.getElementById('handbook-scrolls-used').textContent = handbookScrollsUsed;
     }
     updateScrollCount();
     
     // Define upgrade chances for each scroll type
     const normalChances = [0.9, 0.75, 0.6, 0.45, 0.3, 0.2, 0.1, 0.08, 0.03]; // for +0 to +8 (to +1 to +9)
     const dragonChances = [1, 0.75, 0.65, 0.55, 0.55, 0.40, 0.35, 0.25, 0.20]; // Better chances for dragon scroll
+    const handbookChances = [1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.3, 0.2]; // Best chances for handbook scroll
     
     // Get the appropriate chance based on scroll type
-    const chances = lastUsedScrollType === 'normal' ? normalChances : dragonChances;
+    let chances;
+    if (lastUsedScrollType === 'normal') {
+      chances = normalChances;
+    } else if (lastUsedScrollType === 'dragon') {
+      chances = dragonChances;
+    } else {
+      chances = handbookChances;
+    }
+    
     let upgradeChance = chances[itemLevel] || 0.03; // Default to last value if out of bounds
     
     const wasSuccess = Math.random() < upgradeChance;
@@ -1080,6 +1170,10 @@ function placeDragonScroll(e3) {
         modalOpen = false;
         scrollImg.classList.remove('hide-on-modal');
         dragonScrollImg.classList.remove('hide-on-modal');
+        handbookScrollImg.classList.remove('hide-on-modal');
+        scrollImg.style.opacity = '1';
+        dragonScrollImg.style.opacity = '1';
+        handbookScrollImg.style.opacity = '1';
       };
     }
     
@@ -1094,6 +1188,10 @@ function placeDragonScroll(e3) {
     modalOpen = false;
     scrollImg.classList.remove('hide-on-modal');
     dragonScrollImg.classList.remove('hide-on-modal');
+    handbookScrollImg.classList.remove('hide-on-modal');
+    scrollImg.style.opacity = '1';
+    dragonScrollImg.style.opacity = '1';
+    handbookScrollImg.style.opacity = '1';
   };
   var closeBtn = document.getElementById('upgrade-close');
   if (closeBtn) {
@@ -1102,6 +1200,7 @@ function placeDragonScroll(e3) {
       modalOpen = false;
       scrollImg.classList.remove('hide-on-modal');
       dragonScrollImg.classList.remove('hide-on-modal');
+      handbookScrollImg.classList.remove('hide-on-modal');
     };
   }
 }
@@ -1139,8 +1238,27 @@ function setDragonScrollPos(col, row) {
   dragonScrollImg.style.width = getScrollW()+'px';
   dragonScrollImg.style.height = getScrollH()+'px';
 }
+function setHandbookScrollPos(col, row) {
+  // Prevent overflow
+  col = Math.max(0, Math.min(gridCols - scrollGridW, col));
+  row = Math.max(0, Math.min(gridRows - scrollGridH, row));
+  handbookScrollCol = col;
+  handbookScrollRow = row;
+  const scrollImg = document.getElementById('handbook-scroll-img');
+  if (scrollImg) {
+    scrollImg.style.left = (gridX + handbookScrollCol*getCellW()) + 'px';
+    scrollImg.style.top = (gridY + handbookScrollRow*getCellH()) + 'px';
+    scrollImg.style.width = getScrollW()+'px';
+    scrollImg.style.height = getScrollH()+'px';
+  }
+}
+    // Initialize scroll elements first
+    window.handbookScrollImg = document.getElementById('handbook-scroll-img');
+    
+    // Initialize scroll positions
     setScrollPos(scrollCol, scrollRow);
     setDragonScrollPos(dragonScrollCol, dragonScrollRow);
+    setHandbookScrollPos(handbookScrollCol, handbookScrollRow);
 
     function updateControlDisplay() {
       document.getElementById('gxv').textContent = gridX;
@@ -1296,6 +1414,45 @@ function setDragonScrollPos(col, row) {
       moveDragonGhost(e);
       document.addEventListener('mousemove', moveDragonGhost);
       document.addEventListener('mousedown', placeDragonScroll, true);
+    });
+    
+    // --- Handbook Scroll drag and drop ---
+    const handbookScrollElement = document.getElementById('handbook-scroll-img');
+    handbookScrollElement.addEventListener('mousedown', e => {
+      if (modalOpen) return;
+      if (e.button !== 0) return;
+      if (moving) return;
+      moving = true;
+      // Create ghost handbook scroll
+      ghostHandbookScroll = document.createElement('div');
+      ghostHandbookScroll.className = 'scroll-img';
+      ghostHandbookScroll.style.position = 'absolute';
+      ghostHandbookScroll.style.pointerEvents = 'none';
+      ghostHandbookScroll.style.opacity = '0.7'; // More visible
+      ghostHandbookScroll.style.width = getScrollW() + 'px';
+      ghostHandbookScroll.style.height = getScrollH() + 'px';
+      ghostHandbookScroll.style.zIndex = '9999';
+      let ghostImg = document.createElement('img');
+      ghostImg.src = 'img/handbook.png';
+      ghostImg.alt = 'Handbook Scroll';
+      ghostHandbookScroll.appendChild(ghostImg);
+      document.body.appendChild(ghostHandbookScroll);
+      
+      // Hide the original scroll while dragging
+      handbookScrollElement.style.opacity = '0';
+      
+      // Stop dragging if mouse leaves window
+      const onMouseUp = () => {
+        stopAllDragging();
+        handbookScrollElement.style.opacity = '1';
+      };
+      
+      window.addEventListener('mouseup', onMouseUp, { once: true });
+      
+      // Immediately position ghost at mouse on spawn
+      moveHandbookGhost(e);
+      document.addEventListener('mousemove', moveHandbookGhost);
+      document.addEventListener('mousedown', placeHandbookScroll, true);
     });
   </script>
 </body>
