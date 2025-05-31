@@ -525,7 +525,7 @@ body::before {
     <div class="sidebar-header">Statistics</div>
     <div class="stats-content">
       <div class="stat-item">
-        <div class="stat-label">Normal Scrolls Used:</div>
+        <div class="stat-label">Blessing Scrolls Used:</div>
         <div class="stat-value" id="normal-scrolls-used">0</div>
       </div>
       <div class="stat-item">
@@ -533,8 +533,12 @@ body::before {
         <div class="stat-value" id="dragon-scrolls-used">0</div>
       </div>
       <div class="stat-item">
-        <div class="stat-label">Handbook Scrolls Used:</div>
+        <div class="stat-label">Smith Handbooks Used:</div>
         <div class="stat-value" id="handbook-scrolls-used">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">War Scrolls Used:</div>
+        <div class="stat-value" id="war-scrolls-used">0</div>
       </div>
     </div>
   </div>
@@ -555,14 +559,20 @@ body::before {
       <img src="img/handbook.png" alt="Handbook Scroll" style="width:100%;height:100%;cursor:pointer;" draggable="false">
       <span id="handbook-scroll-count" style="position:absolute;bottom:2px;right:4px;background:rgba(20,20,20,0.78);color:#fff;font-family:'Press Start 2P','VT323','Pixel Emulator',monospace;font-size:11px;padding:1px 4px;border-radius:6px;pointer-events:none;user-select:none;">5</span>
     </div>
+    <div class="scroll-img" id="war-scroll-img" style="position:absolute;left:169px;top:58px;width:36px;height:36px;z-index:2;">
+      <img src="img/war.png" alt="War Scroll" style="width:100%;height:100%;cursor:pointer;" draggable="false">
+      <span id="war-scroll-count" style="position:absolute;bottom:2px;right:4px;background:rgba(20,20,20,0.78);color:#fff;font-family:'Press Start 2P','VT323','Pixel Emulator',monospace;font-size:11px;padding:1px 4px;border-radius:6px;pointer-events:none;user-select:none;">3</span>
+    </div>
   </div>
   <script>
 let scrollCount = 200;
 let dragonScrollCount = 100;
 let handbookScrollCount = 50;
+let warScrollCount = 20;
 let normalScrollsUsed = 0;
 let dragonScrollsUsed = 0;
 let handbookScrollsUsed = 0;
+let warScrollsUsed = 0;
 function updateScrollCount() {
   const el = document.getElementById('scroll-count');
   if (el) el.textContent = scrollCount;
@@ -570,6 +580,8 @@ function updateScrollCount() {
   if (dragonEl) dragonEl.textContent = dragonScrollCount;
   const handbookEl = document.getElementById('handbook-scroll-count');
   if (handbookEl) handbookEl.textContent = handbookScrollCount;
+  const warEl = document.getElementById('war-scroll-count');
+  if (warEl) warEl.textContent = warScrollCount;
 }
 // Background switching functionality
 document.addEventListener('DOMContentLoaded', () => {
@@ -763,11 +775,30 @@ function moveHandbookGhost(e2) {
   e2.preventDefault();
 }
 
+// War scroll drag logic
+function moveWarGhost(e2) {
+  if (!ghostWarScroll) return;
+  let panelRect = panel.getBoundingClientRect();
+  let x = e2.clientX - panelRect.left - gridX;
+  let y = e2.clientY - panelRect.top - gridY;
+  let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
+  let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
+  let px = gridX + col * getCellW();
+  let py = gridY + row * getCellH();
+  ghostWarScroll.style.left = (panelRect.left + px) + 'px';
+  ghostWarScroll.style.top = (panelRect.top + py) + 'px';
+  ghostWarScroll.style.width = getScrollW() + 'px';
+  ghostWarScroll.style.height = getScrollH() + 'px';
+  
+  // Prevent text selection while dragging
+  e2.preventDefault();
+}
+
 
 // Global placeScroll for scroll drag
 let modalOpen = false;
 // Track which scroll type was last used for upgrade
-let lastUsedScrollType = 'normal'; // 'normal', 'dragon', or 'handbook'
+let lastUsedScrollType = 'normal'; // 'normal', 'dragon', 'handbook', or 'war'
 // Dragon scroll drag ghost
 let ghostDragonScroll = null;
 // Handbook scroll drag ghost
@@ -798,6 +829,12 @@ function stopAllDragging() {
     ghostHandbookScroll = null;
     document.removeEventListener('mousemove', moveHandbookGhost);
     document.removeEventListener('mousedown', placeHandbookScroll, true);
+  }
+  if (ghostWarScroll) {
+    if (ghostWarScroll.parentNode) ghostWarScroll.remove();
+    ghostWarScroll = null;
+    document.removeEventListener('mousemove', moveWarGhost);
+    document.removeEventListener('mousedown', placeWarScroll, true);
   }
 }
 
@@ -882,6 +919,44 @@ function placeHandbookScroll(e3) {
     const handbookScrollElement = document.getElementById('handbook-scroll-img');
     if (handbookScrollElement) {
       handbookScrollElement.style.opacity = '1';
+    }
+  }
+  stopAllDragging();
+}
+
+// Place war scroll
+function placeWarScroll(e3) {
+  document.removeEventListener('mousemove', moveWarGhost);
+  document.removeEventListener('mousedown', placeWarScroll, true);
+  if (ghostWarScroll) {
+    let panelRect = panel.getBoundingClientRect();
+    let x = e3.clientX - panelRect.left - gridX;
+    let y = e3.clientY - panelRect.top - gridY;
+    let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
+    let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
+    
+    // Check if war scroll is dropped on sword (for upgrade)
+    if (col < swordCol + swordGridW && col + scrollGridW > swordCol &&
+        row < swordRow + swordGridH && row + scrollGridH > swordRow) {
+      // Set the last used scroll type to war
+      lastUsedScrollType = 'war';
+      // Show upgrade popup for war scroll
+      showUpgradePopup();
+      modalOpen = true;
+    } else {
+      // Otherwise just place the war scroll
+      setWarScrollPos(col, row);
+    }
+    
+    if (ghostWarScroll && ghostWarScroll.parentNode) {
+      ghostWarScroll.remove();
+    }
+    ghostWarScroll = null;
+    
+    // Reset war scroll opacity
+    const warScrollElement = document.getElementById('war-scroll-img');
+    if (warScrollElement) {
+      warScrollElement.style.opacity = '1';
     }
   }
   stopAllDragging();
@@ -981,11 +1056,15 @@ function placeHandbookScroll(e3) {
     
     // Dragon scroll (1x1 cell)
     let dragonScrollCol = 1;
-    let dragonScrollRow = 0; // default position next to regular scroll
+    let dragonScrollRow = 0; // Position next to regular scroll
 
     // Handbook scroll (1x1 cell)
     let handbookScrollCol = 2;
-    let handbookScrollRow = 0; // default position next to dragon scroll
+    let handbookScrollRow = 0; // Position next to dragon scroll
+
+    // War scroll (1x1 cell)
+    let warScrollCol = 3;
+    let warScrollRow = 0; // Position next to handbook scroll
 
     // Add tooltip events to sword
     const swordElement = document.getElementById('item-img');
@@ -1116,14 +1195,46 @@ function placeHandbookScroll(e3) {
   modalOpen = true;
   // Block all actions
   document.getElementById('upgrade-ok').onclick = () => {
-    // Check if we have enough scrolls of the last used type
+    // First check if we have enough scrolls of the last used type
     if ((lastUsedScrollType === 'normal' && scrollCount <= 0) || 
         (lastUsedScrollType === 'dragon' && dragonScrollCount <= 0) || 
-        (lastUsedScrollType === 'handbook' && handbookScrollCount <= 0)) {
+        (lastUsedScrollType === 'handbook' && handbookScrollCount <= 0) ||
+        (lastUsedScrollType === 'war' && warScrollCount <= 0)) {
       return;
     }
     
-    // Decrement the correct scroll count and update statistics
+    // Define upgrade chances for each scroll type
+    const normalChances = [0.9, 0.75, 0.6, 0.45, 0.3, 0.2, 0.1, 0.08, 0.03]; // for +0 to +8 (to +1 to +9)
+    const dragonChances = [1, 0.75, 0.65, 0.55, 0.55, 0.40, 0.35, 0.25, 0.20]; // Better chances for dragon scroll
+    const handbookChances = [1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.3, 0.2]; // Best chances for handbook scroll
+    const warChances = [1, 1, 1, 1, 0, 0, 0, 0, 0]; // 100% for +0 to +3, 0% otherwise
+    
+    // Get the appropriate chance based on scroll type
+    let chances;
+    let isWarScroll = false;
+    
+    if (lastUsedScrollType === 'normal') {
+      chances = normalChances;
+    } else if (lastUsedScrollType === 'dragon') {
+      chances = dragonChances;
+    } else if (lastUsedScrollType === 'handbook') {
+      chances = handbookChances;
+    } else if (lastUsedScrollType === 'war') {
+      chances = warChances;
+      isWarScroll = true;
+    }
+    
+    let upgradeChance = chances[itemLevel] || 0; // Default to 0 if out of bounds
+    
+    // For war scroll, check if the item level is within the allowed range
+    if (isWarScroll) {
+      if (itemLevel > 3) {
+        alert('War Scroll can only be used on weapons +0 to +3!');
+        return;
+      }
+    }
+    
+    // Only decrement scroll count and update statistics if all validations pass
     if (lastUsedScrollType === 'normal') {
       scrollCount--;
       normalScrollsUsed++;
@@ -1132,29 +1243,16 @@ function placeHandbookScroll(e3) {
       dragonScrollCount--;
       dragonScrollsUsed++;
       document.getElementById('dragon-scrolls-used').textContent = dragonScrollsUsed;
-    } else {
+    } else if (lastUsedScrollType === 'handbook') {
       handbookScrollCount--;
       handbookScrollsUsed++;
       document.getElementById('handbook-scrolls-used').textContent = handbookScrollsUsed;
+    } else if (lastUsedScrollType === 'war') {
+      warScrollCount--;
+      warScrollsUsed++;
+      document.getElementById('war-scrolls-used').textContent = warScrollsUsed;
     }
     updateScrollCount();
-    
-    // Define upgrade chances for each scroll type
-    const normalChances = [0.9, 0.75, 0.6, 0.45, 0.3, 0.2, 0.1, 0.08, 0.03]; // for +0 to +8 (to +1 to +9)
-    const dragonChances = [1, 0.75, 0.65, 0.55, 0.55, 0.40, 0.35, 0.25, 0.20]; // Better chances for dragon scroll
-    const handbookChances = [1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.3, 0.2]; // Best chances for handbook scroll
-    
-    // Get the appropriate chance based on scroll type
-    let chances;
-    if (lastUsedScrollType === 'normal') {
-      chances = normalChances;
-    } else if (lastUsedScrollType === 'dragon') {
-      chances = dragonChances;
-    } else {
-      chances = handbookChances;
-    }
-    
-    let upgradeChance = chances[itemLevel] || 0.03; // Default to last value if out of bounds
     
     const wasSuccess = Math.random() < upgradeChance;
     if (wasSuccess) {
@@ -1257,19 +1355,72 @@ function setHandbookScrollPos(col, row) {
   row = Math.max(0, Math.min(gridRows - scrollGridH, row));
   handbookScrollCol = col;
   handbookScrollRow = row;
-  const scrollImg = document.getElementById('handbook-scroll-img');
-  if (scrollImg) {
-    scrollImg.style.left = (gridX + handbookScrollCol*getCellW()) + 'px';
-    scrollImg.style.top = (gridY + handbookScrollRow*getCellH()) + 'px';
-    scrollImg.style.width = getScrollW()+'px';
-    scrollImg.style.height = getScrollH()+'px';
+  const el = document.getElementById('handbook-scroll-img');
+  if (el) {
+    el.style.left = (gridX + col * getCellW()) + 'px';
+    el.style.top = (gridY + row * getCellH()) + 'px';
+  }
+}
+function setWarScrollPos(col, row) {
+  warScrollCol = col;
+  warScrollRow = row;
+  const el = document.getElementById('war-scroll-img');
+  if (el) {
+    el.style.left = (gridX + col * getCellW()) + 'px';
+    el.style.top = (gridY + row * getCellH()) + 'px';
   }
 }
     // Initialize scroll elements first
     window.handbookScrollImg = document.getElementById('handbook-scroll-img');
+    window.warScrollImg = document.getElementById('war-scroll-img');
     
     // Initialize scroll positions
     setScrollPos(scrollCol, scrollRow);
+    
+    // Initialize war scroll position
+    setWarScrollPos(warScrollCol, warScrollRow);
+    
+    // Add event listener for war scroll
+    if (warScrollImg) {
+      warScrollImg.addEventListener('mousedown', e => {
+        e.preventDefault();
+        if (modalOpen) return;
+        if (e.button !== 0) return;
+        if (moving) return;
+        moving = true;
+        lastUsedScrollType = 'war';
+        ghostWarScroll = document.createElement('div');
+        ghostWarScroll.className = 'scroll-img';
+        ghostWarScroll.style.position = 'fixed';
+        ghostWarScroll.style.pointerEvents = 'none';
+        ghostWarScroll.style.opacity = '0.7';
+        ghostWarScroll.style.width = getScrollW() + 'px';
+        ghostWarScroll.style.height = getScrollH() + 'px';
+        ghostWarScroll.style.zIndex = '9999';
+        let ghostImg = document.createElement('img');
+        ghostImg.src = 'img/war.png';
+        ghostImg.alt = 'War Scroll';
+        ghostImg.style.width = '100%';
+        ghostImg.style.height = '100%';
+        ghostWarScroll.appendChild(ghostImg);
+        document.body.appendChild(ghostWarScroll);
+        
+        // Set initial position
+        let panelRect = panel.getBoundingClientRect();
+        ghostWarScroll.style.left = (panelRect.left + gridX + warScrollCol * getCellW()) + 'px';
+        ghostWarScroll.style.top = (panelRect.top + gridY + warScrollRow * getCellH()) + 'px';
+        
+        // Set opacity of the original scroll
+        warScrollImg.style.opacity = '0.5';
+        
+        // Add event listeners
+        document.addEventListener('mousemove', moveWarGhost);
+        document.addEventListener('mousedown', placeWarScroll, true);
+        
+        // Prevent text selection
+        e.preventDefault();
+      });
+    }
     setDragonScrollPos(dragonScrollCol, dragonScrollRow);
     setHandbookScrollPos(handbookScrollCol, handbookScrollRow);
 
