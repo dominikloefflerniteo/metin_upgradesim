@@ -363,12 +363,19 @@ body::before {
       <img src="img/segi.png" alt="Segi Scroll" style="width:100%;height:100%;cursor:pointer;" draggable="true">
       <span id="scroll-count" style="position:absolute;bottom:2px;right:4px;background:rgba(20,20,20,0.78);color:#fff;font-family:'Press Start 2P','VT323','Pixel Emulator',monospace;font-size:11px;padding:1px 4px;border-radius:6px;pointer-events:none;user-select:none;">200</span>
     </div>
+    <div class="scroll-img" id="dragon-scroll-img" style="position:absolute;left:390px;top:320px;width:48px;height:48px;z-index:2;">
+      <img src="img/drachensegi.png" alt="Dragon Scroll" style="width:100%;height:100%;cursor:pointer;" draggable="true">
+      <span id="dragon-scroll-count" style="position:absolute;bottom:2px;right:4px;background:rgba(20,20,20,0.78);color:#fff;font-family:'Press Start 2P','VT323','Pixel Emulator',monospace;font-size:11px;padding:1px 4px;border-radius:6px;pointer-events:none;user-select:none;">10</span>
+    </div>
   </div>
   <script>
 let scrollCount = 200;
+let dragonScrollCount = 10;
 function updateScrollCount() {
   const el = document.getElementById('scroll-count');
   if (el) el.textContent = scrollCount;
+  const dragonEl = document.getElementById('dragon-scroll-count');
+  if (dragonEl) dragonEl.textContent = dragonScrollCount;
 }
 document.addEventListener('DOMContentLoaded', updateScrollCount);
 
@@ -404,9 +411,19 @@ document.addEventListener('DOMContentLoaded', updateScrollCount);
     const itemStatsDiv = document.getElementById('item-stats');
     const upgradeBtn = document.getElementById('upgrade-btn');
     const scrollImg = document.getElementById('scroll-img');
+    const dragonScrollImg = document.getElementById('dragon-scroll-img');
     const modalRoot = document.getElementById('modal-root');
     // --- Functions ---
-// Global moveGhost for scroll drag
+// Set position for dragon scroll
+function setDragonScrollPos(col, row) {
+  // Prevent overflow
+  col = Math.max(0, Math.min(gridCols - scrollGridW, col));
+  row = Math.max(0, Math.min(gridRows - scrollGridH, row));
+  dragonScrollImg.style.left = (gridX + col*getCellW()) + 'px';
+  dragonScrollImg.style.top = (gridY + row*getCellH()) + 'px';
+}
+
+// --- Scroll Drag Logic (Normal and Dragon) ---
 function moveGhost(e2) {
   if (!ghostScroll) return;
   let panelRect = panel.getBoundingClientRect();
@@ -422,8 +439,27 @@ function moveGhost(e2) {
   ghostScroll.style.height = getScrollH()+'px';
 }
 
+// Dragon scroll drag logic
+function moveDragonGhost(e2) {
+  if (!ghostDragonScroll) return;
+  let panelRect = panel.getBoundingClientRect();
+  let x = e2.clientX - panelRect.left - gridX;
+  let y = e2.clientY - panelRect.top - gridY;
+  let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
+  let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
+  let px = gridX + col * getCellW();
+  let py = gridY + row * getCellH();
+  ghostDragonScroll.style.left = (panelRect.left + px) + 'px';
+  ghostDragonScroll.style.top = (panelRect.top + py) + 'px';
+  ghostDragonScroll.style.width = getScrollW()+'px';
+  ghostDragonScroll.style.height = getScrollH()+'px';
+}
+
+
 // Global placeScroll for scroll drag
 let modalOpen = false;
+// Dragon scroll drag ghost
+let ghostDragonScroll = null;
 
 function stopAllDragging() {
   moving = false;
@@ -438,6 +474,12 @@ function stopAllDragging() {
     ghostScroll = null;
     document.removeEventListener('mousemove', moveGhost);
     document.removeEventListener('mousedown', placeScroll, true);
+  }
+  if (ghostDragonScroll) {
+    if (ghostDragonScroll.parentNode) ghostDragonScroll.remove();
+    ghostDragonScroll = null;
+    document.removeEventListener('mousemove', moveDragonGhost);
+    document.removeEventListener('mousedown', placeDragonScroll, true);
   }
 }
 
@@ -454,7 +496,23 @@ function placeScroll(e3) {
     if (ghostScroll && ghostScroll.parentNode) ghostScroll.remove();
     ghostScroll = null;
   }
-  // Stop all dragging (sword and scroll)
+  stopAllDragging();
+}
+
+// Place dragon scroll
+function placeDragonScroll(e3) {
+  document.removeEventListener('mousemove', moveDragonGhost);
+  document.removeEventListener('mousedown', placeDragonScroll, true);
+  if (ghostDragonScroll) {
+    let panelRect = panel.getBoundingClientRect();
+    let x = e3.clientX - panelRect.left - gridX;
+    let y = e3.clientY - panelRect.top - gridY;
+    let col = Math.max(0, Math.min(gridCols - scrollGridW, Math.floor(x / getCellW())));
+    let row = Math.max(0, Math.min(gridRows - scrollGridH, Math.floor(y / getCellH())));
+    setDragonScrollPos(col, row);
+    if (ghostDragonScroll && ghostDragonScroll.parentNode) ghostDragonScroll.remove();
+    ghostDragonScroll = null;
+  }
   stopAllDragging();
 }
 
