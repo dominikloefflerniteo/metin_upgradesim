@@ -752,8 +752,11 @@ function moveHandbookGhost(e2) {
   let py = gridY + row * getCellH();
   ghostHandbookScroll.style.left = (panelRect.left + px) + 'px';
   ghostHandbookScroll.style.top = (panelRect.top + py) + 'px';
-  ghostHandbookScroll.style.width = getScrollW()+'px';
-  ghostHandbookScroll.style.height = getScrollH()+'px';
+  ghostHandbookScroll.style.width = getScrollW() + 'px';
+  ghostHandbookScroll.style.height = getScrollH() + 'px';
+  
+  // Prevent text selection while dragging
+  e2.preventDefault();
 }
 
 
@@ -870,8 +873,14 @@ function placeHandbookScroll(e3) {
       ghostHandbookScroll.remove();
     }
     ghostHandbookScroll = null;
+    
+    // Reset handbook scroll opacity
+    const handbookScrollElement = document.getElementById('handbook-scroll-img');
+    if (handbookScrollElement) {
+      handbookScrollElement.style.opacity = '1';
+    }
   }
-  moving = false;
+  stopAllDragging();
 }
 
     function updateItemUI() {
@@ -1418,42 +1427,47 @@ function setHandbookScrollPos(col, row) {
     
     // --- Handbook Scroll drag and drop ---
     const handbookScrollElement = document.getElementById('handbook-scroll-img');
-    handbookScrollElement.addEventListener('mousedown', e => {
-      if (modalOpen) return;
-      if (e.button !== 0) return;
-      if (moving) return;
-      moving = true;
-      // Create ghost handbook scroll
-      ghostHandbookScroll = document.createElement('div');
-      ghostHandbookScroll.className = 'scroll-img';
-      ghostHandbookScroll.style.position = 'absolute';
-      ghostHandbookScroll.style.pointerEvents = 'none';
-      ghostHandbookScroll.style.opacity = '0.7'; // More visible
-      ghostHandbookScroll.style.width = getScrollW() + 'px';
-      ghostHandbookScroll.style.height = getScrollH() + 'px';
-      ghostHandbookScroll.style.zIndex = '9999';
-      let ghostImg = document.createElement('img');
-      ghostImg.src = 'img/handbook.png';
-      ghostImg.alt = 'Handbook Scroll';
-      ghostHandbookScroll.appendChild(ghostImg);
-      document.body.appendChild(ghostHandbookScroll);
-      
-      // Hide the original scroll while dragging
-      handbookScrollElement.style.opacity = '0';
-      
-      // Stop dragging if mouse leaves window
-      const onMouseUp = () => {
-        stopAllDragging();
-        handbookScrollElement.style.opacity = '1';
-      };
-      
-      window.addEventListener('mouseup', onMouseUp, { once: true });
-      
-      // Immediately position ghost at mouse on spawn
-      moveHandbookGhost(e);
-      document.addEventListener('mousemove', moveHandbookGhost);
-      document.addEventListener('mousedown', placeHandbookScroll, true);
-    });
+    if (handbookScrollElement) {
+      handbookScrollElement.addEventListener('mousedown', e => {
+        e.preventDefault();
+        if (modalOpen) return;
+        if (e.button !== 0) return;
+        if (moving) return;
+        moving = true;
+        
+        // Set the last used scroll type to handbook
+        lastUsedScrollType = 'handbook';
+        
+        // Create ghost handbook scroll
+        ghostHandbookScroll = document.createElement('div');
+        ghostHandbookScroll.className = 'scroll-img';
+        ghostHandbookScroll.style.position = 'fixed';
+        ghostHandbookScroll.style.pointerEvents = 'none';
+        ghostHandbookScroll.style.opacity = '0.7';
+        ghostHandbookScroll.style.width = getScrollW() + 'px';
+        ghostHandbookScroll.style.height = getScrollH() + 'px';
+        ghostHandbookScroll.style.zIndex = '9999';
+        
+        let ghostImg = document.createElement('img');
+        ghostImg.src = 'img/handbook.png';
+        ghostImg.alt = 'Handbook Scroll';
+        ghostImg.style.width = '100%';
+        ghostImg.style.height = '100%';
+        ghostImg.style.objectFit = 'contain';
+        ghostHandbookScroll.appendChild(ghostImg);
+        document.body.appendChild(ghostHandbookScroll);
+        
+        // Hide the original scroll while dragging
+        handbookScrollElement.style.opacity = '0.5';
+        
+        // Position ghost at mouse on spawn
+        moveHandbookGhost(e);
+        
+        // Add event listeners
+        document.addEventListener('mousemove', moveHandbookGhost);
+        document.addEventListener('mousedown', placeHandbookScroll, true);
+      });
+    }
   </script>
 </body>
 </html>
