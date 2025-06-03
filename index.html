@@ -472,6 +472,41 @@ body::before {
   <audio id="successSound" src="audio/success.mp3" preload="auto"></audio>
   <audio id="failSound" src="audio/fail.mp3" preload="auto"></audio>
   <audio id="clickSound" src="audio/click.mp3" preload="auto"></audio>
+  
+  <script>
+  // Play sound function
+  function playSound(soundId) {
+    const sound = document.getElementById(soundId);
+    if (sound) {
+      sound.currentTime = 0;
+      sound.play().catch(e => console.log(`Could not play ${soundId} sound:`, e));
+    }
+  }
+  
+  // Play click sound function
+  function playClickSound() {
+    playSound('clickSound');
+  }
+  
+  // Add click sound to all buttons
+  document.addEventListener('DOMContentLoaded', () => {
+    // Add click sound to all buttons
+    document.querySelectorAll('button').forEach(button => {
+      button.addEventListener('mousedown', playClickSound);
+    });
+    
+    // Add click sound to all scrolls
+    document.querySelectorAll('.scroll-img').forEach(scroll => {
+      scroll.addEventListener('mousedown', playClickSound);
+    });
+    
+    // Add click sound to item image
+    const itemImg = document.getElementById('item-img');
+    if (itemImg) {
+      itemImg.addEventListener('mousedown', playClickSound);
+    }
+  });
+  </script>
   <div id="modal-root"></div>
   <div id="controls" style="display:none;">
     <div style="margin-bottom:8px;font-weight:bold;">Grid Controls</div>
@@ -999,6 +1034,13 @@ function placeWarScroll(e3) {
       };
     }
     function showResultModal(success) {
+      // Play success or fail sound
+      if (success) {
+        playSound('successSound');
+      } else {
+        playSound('failSound');
+      }
+      
       modalRoot.innerHTML = `
         <div class="modal-bg">
           <div class="modal">
@@ -1463,7 +1505,7 @@ function setWarScrollPos(col, row) {
       };
     });
 
-    // Add click sound to item image
+    // Click handling for item image
     itemImg.addEventListener('mousedown', e => {
       playClickSound();
       if (modalOpen) return;
