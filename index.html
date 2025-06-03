@@ -468,6 +468,9 @@ body::before {
 </style>
 </head>
 <body>
+  <!-- Audio elements for sound effects -->
+  <audio id="successSound" src="audio/success.mp3" preload="auto"></audio>
+  <audio id="failSound" src="audio/fail.mp3" preload="auto"></audio>
   <div id="modal-root"></div>
   <div id="controls" style="display:none;">
     <div style="margin-bottom:8px;font-weight:bold;">Grid Controls</div>
@@ -1265,6 +1268,14 @@ function placeWarScroll(e3) {
   };
 
   function showResultPopup(isSuccess) {
+    // Play the appropriate sound effect
+    const soundId = isSuccess ? 'successSound' : 'failSound';
+    const sound = document.getElementById(soundId);
+    if (sound) {
+      sound.currentTime = 0; // Rewind to the start in case it's already playing
+      sound.play().catch(e => console.log('Could not play sound:', e));
+    }
+
     modalRoot.innerHTML = `
       <div class="upgrade-modal-bg" id="result-popup-bg" style="z-index:999;cursor:pointer;">
         <div class="upgrade-modal" style="background:none;box-shadow:none;display:flex;justify-content:center;align-items:center;">
